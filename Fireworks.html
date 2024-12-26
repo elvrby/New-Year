@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fireworks Display</title>
+    <style>
+        body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        background: url('night-sky.jpg') no-repeat center center fixed;
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        
+        height: 100vh;
+    }
+
+        #fireworksButton {
+            position: absolute;
+            z-index: 10;
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: #ff5722;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #newYearText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ffffff;
+            text-shadow: 0 0 20px #ff9800, 0 0 30px #ff9800;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .snowflake {
+            position: fixed;
+            top: -10px;
+            color: rgb(255, 255, 255);
+            font-size: 10px;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-10px);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="fireworksButton">Click Here</button>
+    <div id="newYearText">Happy New Year!</div>
+    <canvas id="fireworksCanvas"></canvas>
+    <audio id="backgroundMusic" loop>
+        <source src="your-christmas-music.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        const button = document.getElementById('fireworksButton');
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        const newYearText = document.getElementById('newYearText');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let fireworks = [];
+
+        class Firework {
+            constructor(startX, startY, targetX, targetY, isParticleOnly = false) {
+                this.startX = startX;
+                this.startY = startY;
+                this.x = startX;
+                this.y = startY;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.speed = 5;
+                this.angle = Math.atan2(targetY - startY, targetX - startX);
+                this.exploded = isParticleOnly;
+                this.particles = [];
+
+                if (this.exploded) {
+                    for (let i = 0; i < 200; i++) {
+                        this.particles.push(new Particle(this.x, this.y));
+                    }
+                }
+            }
+
+            update() {
+                if (!this.exploded) {
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < this.speed) {
+                        this.exploded = true;
+                        for (let i = 0; i < 200; i++) {
+                            this.particles.push(new Particle(this.x, this.y));
+                        }
+                    } else {
+                        this.x += Math.cos(this.angle) * this.speed;
+                        this.y += Math.sin(this.angle) * this.speed;
+                    }
+                } else {
+                    this.particles.forEach(particle => particle.update());
+                }
+            }
+
+            draw() {
+                if (!this.exploded) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = 'black';
+                    ctx.fill();
+                } else {
+                    this.particles.forEach(particle => particle.draw());
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.speed = Math.random() * 8 + 2;
+                this.angle = Math.random() * 2 * Math.PI;
+                this.radius = Math.random() * 3 + 1;
+                this.opacity = 1;
+                this.decay = Math.random() * 0.02 + 0.01;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            }
+
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.opacity = Math.max(this.opacity - this.decay, 0);
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color.replace('hsl', 'hsla').replace(')', `, ${this.opacity})`);
+                ctx.fill();
+            }
+        }
+
+        function animate() {
+            if (document.hidden) return; // Pause when tab is not visible
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            fireworks = fireworks.filter(firework => !firework.exploded || firework.particles.some(p => p.opacity > 0));
+            fireworks.forEach(firework => {
+                firework.update();
+                firework.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        function launchFireworks(isParticleOnly = false) {
+            for (let i = 0; i < 20; i++) {
+                fireworks.push(new Firework(
+                    canvas.width / 2,
+                    canvas.height,
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height / 2,
+                    isParticleOnly
+                ));
+            }
+        }
+
+        function createSnowflake() {
+            const snowflake = document.createElement('div');
+            snowflake.classList.add('snowflake');
+            snowflake.textContent = '❄';
+            snowflake.style.left = Math.random() * window.innerWidth + 'px';
+            snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+            snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
+            document.body.appendChild(snowflake);
+
+            setTimeout(() => {
+                snowflake.remove();
+            }, 5000);
+        }
+
+        setInterval(createSnowflake, 100);
+
+        button.addEventListener('click', () => {
+            button.style.display = 'none'; // Hide the button
+            newYearText.style.opacity = 0; // Reset text visibility
+            launchFireworks();
+
+            setTimeout(() => {
+                newYearText.style.opacity = 1;
+                backgroundMusic.play(); // Play music
+                launchFireworks(true); // Launch particle-only fireworks when text appears
+            }, 3000);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
